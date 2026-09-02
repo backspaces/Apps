@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>AppCache Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a202c; }
+  h1 { margin-bottom: 0.2rem; }
+  h2 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+  .sub { color: #718096; margin-top: 0; }
+  fieldset { border: 1px solid #e2e8f0; border-radius: 8px; margin: 1rem 0; padding: 0.8rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: inline-flex; align-items: center; gap: 0.4rem; margin-right: 1.2rem; font-size: 0.9rem; }
+  input[type=number] { width: 5rem; }
+  button { padding: 0.45rem 0.9rem; margin: 0.2rem 0.4rem 0.2rem 0; cursor: pointer; }
+  .entries { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .entry { border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.8rem; }
+  .entry h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+  .entry .value { font-family: ui-monospace, monospace; font-size: 0.85rem; background: #f7fafc; padding: 0.5rem; border-radius: 6px; min-height: 2.5rem; word-break: break-all; }
+  .entry .age { color: #718096; font-size: 0.8rem; margin-top: 0.3rem; }
+  .entry .note { color: #a0aec0; font-size: 0.78rem; margin-top: 0.3rem; }
+  #log { background: #1a202c; color: #a0aec0; font-family: ui-monospace, monospace; font-size: 0.78rem;
+         padding: 0.8rem; border-radius: 6px; height: 240px; overflow-y: auto; white-space: pre-wrap; }
+  .log-line { border-bottom: 1px solid #2d3748; padding: 0.15rem 0; }
+  .log-line.hit { color: #68d391; }
+  .log-line.miss { color: #63b3ed; }
+  .log-line.stale { color: #f6e05e; }
+  .log-line.dedup { color: #b794f4; }
+  .log-line.revalidated { color: #4fd1c5; }
+  .log-line.invalidate { color: #fc8181; }
+</style>
+</head>
+<body>
+
+<h1>AppCache Demo</h1>
+<p class="sub">A small TTL / dedup / stale-while-revalidate cache, built on top of a
+  <code>get()</code>/<code>set()</code>/<code>delete()</code>/<code>keys()</code> backend
+  interface — so the same policy logic runs unmodified whether the backend is a plain
+  in-memory <code>Map</code> or the browser's native <code>CacheStorage</code>/<code>Cache</code>
+  API (used directly from the page — no service worker needed). Compare with
+  <a href="../ServiceWorkerDemo/">ServiceWorkerDemo</a>, which uses that same native Cache API
+  but as a cache-first proxy for network requests inside a service worker.
+  See <a href="README.md">README.md</a> for a step-by-step walkthrough.</p>
+
+<h2>TTL / dedup / tags</h2>
+<fieldset>
+  <legend>Config</legend>
+  <label>TTL (ms) <input type="number" id="ttlInput" value="4000" step="500" min="0"></label>
+  <label><input type="checkbox" id="swrCheckbox"> stale-while-revalidate</label>
+  <button id="reloadBtn">Reload page</button>
+</fieldset>
+
+<div class="entries">
+  <div class="entry">
+    <h3>greeting <span style="color:#a0aec0">(tag: demo)</span></h3>
+    <div class="value" id="greetingValue">—</div>
+    <div class="age" id="greetingAge"></div>
+    <button data-key="greeting" class="getBtn">Get</button>
+    <button data-key="greeting" class="rapidBtn">Get ×3 rapid</button>
+  </div>
+  <div class="entry">
+    <h3>time <span style="color:#a0aec0">(tag: demo)</span></h3>
+    <div class="value" id="timeValue">—</div>
+    <div class="age" id="timeAge"></div>
+    <button data-key="time" class="getBtn">Get</button>
+    <button data-key="time" class="rapidBtn">Get ×3 rapid</button>
+  </div>
+</div>
+
+<button id="invalidateBtn">Invalidate tag "demo"</button>
+<button id="clearBtn">Clear cache</button>
+
+<h2>Persistence across reload</h2>
+<p class="sub">These two populate themselves on load, backed by a fixed instance each — no
+  setup required. Just reload the page (the button above works) and look again: whatever
+  state you left steps above in doesn't matter.</p>
+
+<div class="entries">
+  <div class="entry">
+    <h3>Memory (Map)</h3>
+    <div class="value" id="memoryProofValue">—</div>
+    <div class="age" id="memoryProofAge"></div>
+    <div class="note">changes every reload — a plain Map only lives as long as the page does</div>
+  </div>
+  <div class="entry">
+    <h3>CacheStorage / Cache API</h3>
+    <div class="value" id="cacheapiProofValue">—</div>
+    <div class="age" id="cacheapiProofAge"></div>
+    <div class="note">stays identical across reloads — really persisted by the browser</div>
+  </div>
+</div>
+<button id="regenerateBtn">Regenerate both (proves neither is hardcoded)</button>
+
+<h2>Log</h2>
+<div id="log"></div>
+
+<script type="module">
+// --- AppCache: named to avoid shadowing the native global `Cache` constructor. ---
+
+class MemoryBackend {
+  #map = new Map()
+  async get(key) { return this.#map.get(key) }
+  async set(key, envelope) { this.#map.set(key, envelope) }
+  async delete(key) { this.#map.delete(key) }
+  async keys() { return [...this.#map.keys()] }
+}
+
+// Uses the native CacheStorage/Cache pair directly from the page (no service
+// worker registration required — that's only needed to intercept fetches).
+// Cache entries are Request/Response pairs, so arbitrary keys are smuggled
+// into a synthetic same-origin-shaped Request URL, and the envelope
+// (value/storedAt/ttl/tags) is JSON-serialized into the Response body.
+class CacheAPIBackend {
+  #cacheName
+  constructor(cacheName = 'appcache-demo-v1') { this.#cacheName = cacheName }
+  #request(key) { return new Request('https://appcache.local/' + encodeURIComponent(key)) }
+  async #cache() { return caches.open(this.#cacheName) }
+  async get(key) {
+    const res = await (await this.#cache()).match(this.#request(key))
+    return res ? res.json() : undefined
+  }
+  async set(key, envelope) {
+    await (await this.#cache()).put(this.#request(key), new Response(JSON.stringify(envelope)))
+  }
+  async delete(key) {
+    await (await this.#cache()).delete(this.#request(key))
+  }
+  async keys() {
+    const requests = await (await this.#cache()).keys()
+    return requests.map(r => decodeURIComponent(new URL(r.url).pathname.split('/').pop()))
+  }
+}
+
+class AppCache extends EventTarget {
+  #backend
+  #defaultTTL
+  #inflight = new Map()
+
+  constructor({ backend = new MemoryBackend(), defaultTTL = Infinity } = {}) {
+    super()
+    this.#backend = backend
+    this.#defaultTTL = defaultTTL
+  }
+
+  #emit(type, detail) { this.dispatchEvent(new CustomEvent(type, { detail })) }
+
+  async get(key, fetcher, { ttl = this.#defaultTTL, tags = [], staleWhileRevalidate = false } = {}) {
+    const envelope = await this.#backend.get(key)
+    const fresh = envelope && (Date.now() - envelope.storedAt < envelope.ttl)
+
+    if (fresh) {
+      this.#emit('hit', { key, value: envelope.value })
+      return envelope.value
+    }
+
+    if (envelope && staleWhileRevalidate) {
+      this.#emit('stale', { key, value: envelope.value })
+      this.#revalidate(key, fetcher, ttl, tags)
+      return envelope.value
+    }
+
+    if (this.#inflight.has(key)) {
+      this.#emit('dedup', { key })
+      return this.#inflight.get(key)
+    }
+
+    this.#emit('miss', { key })
+    const promise = this.#populate(key, fetcher, ttl, tags)
+    this.#inflight.set(key, promise)
+    try {
+      return await promise
+    } finally {
+      this.#inflight.delete(key)
+    }
+  }
+
+  async #populate(key, fetcher, ttl, tags) {
+    const value = await fetcher()
+    await this.#backend.set(key, { value, storedAt: Date.now(), ttl, tags })
+    return value
+  }
+
+  #revalidate(key, fetcher, ttl, tags) {
+    if (this.#inflight.has(key)) return
+    const promise = this.#populate(key, fetcher, ttl, tags)
+      .then(value => { this.#emit('revalidated', { key, value }) })
+      .finally(() => this.#inflight.delete(key))
+    this.#inflight.set(key, promise)
+  }
+
+  async invalidateTag(tag) {
+    for (const key of await this.#backend.keys()) {
+      const envelope = await this.#backend.get(key)
+      if (envelope?.tags?.includes(tag)) {
+        await this.#backend.delete(key)
+        this.#emit('invalidate', { key, tag })
+      }
+    }
+  }
+
+  async clear() {
+    await Promise.all((await this.#backend.keys()).map(k => this.#backend.delete(k)))
+  }
+}
+
+// --- Demo wiring ---
+
+const logEl = document.getElementById('log')
+function log(msg, cls = '') {
+  const line = document.createElement('div')
+  line.className = 'log-line' + (cls ? ' ' + cls : '')
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+  logEl.appendChild(line)
+  logEl.scrollTop = logEl.scrollHeight
+}
+
+function wireLogging(cacheInstance) {
+  for (const type of ['hit', 'miss', 'stale', 'dedup', 'revalidated', 'invalidate']) {
+    cacheInstance.addEventListener(type, e => {
+      const { key, tag } = e.detail
+      log(`${type}${key ? ' ' + key : ''}${tag ? ' (tag: ' + tag + ')' : ''}`, type)
+    })
+  }
+}
+
+// --- TTL / dedup / tags section: always Memory-backed and always freshly
+// built, so steps here behave the same regardless of what order you click
+// them in or what you did on a previous visit. ---
+
+const fetchers = {
+  // Simulated network latency; the changing nonce is what makes a real
+  // re-fetch visibly distinguishable from a cache hit in the UI.
+  greeting: () => new Promise(resolve => setTimeout(() => {
+    resolve({ text: 'hello, ' + Math.random().toString(36).slice(2, 6) })
+  }, 800)),
+  time: () => new Promise(resolve => setTimeout(() => {
+    resolve({ text: new Date().toLocaleTimeString() })
+  }, 800)),
+}
+
+const cache = new AppCache({ backend: new MemoryBackend() })
+wireLogging(cache)
+
+function currentOpts() {
+  return {
+    ttl: Number(document.getElementById('ttlInput').value),
+    tags: ['demo'],
+    staleWhileRevalidate: document.getElementById('swrCheckbox').checked,
+  }
+}
+
+async function doGet(key) {
+  const value = await cache.get(key, fetchers[key], currentOpts())
+  document.getElementById(key + 'Value').textContent = JSON.stringify(value)
+  document.getElementById(key + 'Age').textContent = 'fetched/served at ' + new Date().toLocaleTimeString()
+}
+
+document.getElementById('reloadBtn').addEventListener('click', () => location.reload())
+document.getElementById('invalidateBtn').addEventListener('click', () => cache.invalidateTag('demo'))
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  await cache.clear()
+  log('cache cleared')
+})
+
+document.querySelectorAll('.getBtn').forEach(btn => {
+  // Disabled while its own fetch is in flight, so a normal double-click
+  // (almost always faster than the simulated 800ms fetch) can't land inside
+  // that window and demonstrate dedup instead of the hit it's meant to show
+  // — dedup has its own dedicated button below.
+  btn.addEventListener('click', async () => {
+    btn.disabled = true
+    try {
+      await doGet(btn.dataset.key)
+    } finally {
+      btn.disabled = false
+    }
+  })
+})
+document.querySelectorAll('.rapidBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.key
+    log(`firing 3 concurrent get('${key}') calls`)
+    Promise.all([doGet(key), doGet(key), doGet(key)])
+  })
+})
+
+// --- Persistence section: two fixed instances, one per backend, each
+// populating itself on load with ttl: Infinity — no dropdown, no Apply
+// button, no TTL to remember to bump. Whichever backend actually persists
+// data across a reload shows it by just... still being there. ---
+
+const memoryProofCache = new AppCache({ backend: new MemoryBackend() })
+const cacheapiProofCache = new AppCache({ backend: new CacheAPIBackend() })
+wireLogging(memoryProofCache)
+wireLogging(cacheapiProofCache)
+
+const proofFetcher = () => new Promise(resolve => setTimeout(() => {
+  resolve({ nonce: Math.random().toString(36).slice(2, 8), generatedAt: new Date().toLocaleTimeString() })
+}, 300))
+
+// A year, not Infinity: JSON has no representation for Infinity (it
+// silently becomes null), and CacheAPIBackend round-trips every envelope
+// through JSON — an Infinity ttl would come back as null, and
+// `elapsed < null` coerces to `elapsed < 0`, which is never true. That
+// makes a "persistent" entry permanently unfreshable instead of eternal.
+const PROOF_TTL = 1000 * 60 * 60 * 24 * 365
+
+async function showProof(cacheInstance, key, valueElId, ageElId) {
+  const value = await cacheInstance.get(key, proofFetcher, { ttl: PROOF_TTL, tags: ['persistence'] })
+  document.getElementById(valueElId).textContent = JSON.stringify(value)
+  document.getElementById(ageElId).textContent = 'generated at ' + value.generatedAt
+}
+
+function loadProofs() {
+  showProof(memoryProofCache, 'memoryProof', 'memoryProofValue', 'memoryProofAge')
+  showProof(cacheapiProofCache, 'cacheapiProof', 'cacheapiProofValue', 'cacheapiProofAge')
+}
+loadProofs()
+
+document.getElementById('regenerateBtn').addEventListener('click', async () => {
+  await Promise.all([memoryProofCache.clear(), cacheapiProofCache.clear()])
+  loadProofs()
+})
+</script>
+
+</body>
+</html>

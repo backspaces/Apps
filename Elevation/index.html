@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Elevation — Terrain Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+  html, body { margin: 0; height: 100%; }
+
+  /* The map fills the window. MapLibre draws into this one <div>. */
+  #map { position: absolute; inset: 0; }
+
+  /* A small caption box floating over the map. Pure HTML/CSS — it just
+     sits on top of the map. Click it to collapse/expand (see map.js). */
+  #panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    max-width: 320px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+    font: 13px/1.45 system-ui, sans-serif;
+    color: #222;
+    cursor: pointer;
+  }
+  #panel h1 { margin: 0; font-size: 15px; }
+  #panel p  { margin: 6px 0 0; }
+  #panel a  { color: #0a58ca; }
+  #panel-toggle { float: right; margin-left: 12px; color: #888; font-weight: 400; }
+
+  /* The droplet controls: motion rule, spacing slider, run buttons. */
+  #controls {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    cursor: default;
+  }
+  #controls label { display: block; font-size: 12px; color: #333; margin-top: 6px; }
+  #controls label:first-child { margin-top: 0; }
+  #controls input[type="range"] { width: 100%; margin: 5px 0 0; cursor: pointer; }
+  #controls select { margin-left: 6px; font: 12px system-ui, sans-serif; }
+  #spacing-val { color: #555; }
+  #buttons { margin-top: 8px; display: flex; gap: 6px; }
+  #buttons button {
+    flex: 1;
+    padding: 5px 0;
+    font: 12px system-ui, sans-serif;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    background: #f4f4f4;
+    cursor: pointer;
+  }
+  #buttons button:hover { background: #e8e8e8; }
+
+  /* Collapsed: show only the title row. */
+  #panel.collapsed p,
+  #panel.collapsed #controls { display: none; }
+  #panel.collapsed h1 { margin: 0; }
+
+  /* Readout of the elevation under the mouse. */
+  #elev {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 6px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+    font: 13px/1.2 ui-monospace, monospace;
+    color: #222;
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+  <h1>Elevation <span id="panel-toggle">–</span></h1>
+  <p>A 3D terrain map of the Sangre de Cristo mountains above Santa Fe, NM.
+     Drag to pan, scroll to zoom, right-drag (or Ctrl-drag) to tilt.</p>
+  <p>The ground elevation under the pointer shows bottom-right. The blue
+     dots are water droplets on a fixed grid. Press <b>Start</b> and each
+     walks downhill; ones that reach a pit or the edge darken, ones still
+     moving when the run ends stay bright — give them a longer run.</p>
+  <p>See <a href="README.md">README.md</a> for how it works and where the
+     elevation data comes from.</p>
+  <div id="controls">
+    <label>
+      Motion:
+      <select id="mode">
+        <option value="vector">downhill vector (curved)</option>
+        <option value="neighbors">8 neighbors (grid)</option>
+      </select>
+    </label>
+    <label>
+      Droplet spacing: <span id="spacing-val">400 m</span>
+      <input id="spacing" type="range" min="150" max="1500" step="50" value="400" />
+    </label>
+    <label>
+      Run length: <span id="steps-val">90</span> steps
+      <input id="steps" type="range" min="20" max="400" step="10" value="90" />
+    </label>
+    <div id="buttons">
+      <button id="play" type="button">Start</button>
+      <button id="reset" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div id="elev">move the mouse over the map</div>
+
+<!-- All the map code lives in map.js (an ES module, hence type="module"). -->
+<script type="module" src="map.js"></script>
+</body>
+</html>

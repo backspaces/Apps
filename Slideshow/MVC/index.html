@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>MVC Slides</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="../shared/deck.css" />
+    </head>
+    <body>
+        <a class="hub-link" href="../index.html">&larr; Slideshow</a>
+
+        <div id="deck"></div>
+
+        <!--
+  Slides live below as plain markdown. Separate slides with a line
+  containing just "---". Raw HTML is allowed inline whenever you need
+  more control than markdown gives you (see the "mixed" slide below).
+-->
+        <script type="text/markdown" id="slides">
+            ## MVC
+
+            AgentScript uses a MVC Architecture.
+
+            M: Model\
+            V: View\
+            C: Controller
+
+            A Model is a computing function that iterates over data modifying it each pass. It is a pure data manipulation engine.
+
+            A View make the Model visible, changing each time the Model changes.
+
+            A controller provides means to modify a running Model to test it under changes to it's internal values.
+
+            ---
+
+            ## Model
+
+            The Model constructor takes a World object defining the x, y
+            geometry of the Model's grid, called Patches
+
+            It then creates the three core arrays: Patches, Turtles, and Links.
+
+            Patches are a grid of Patch objects in the x, y extents, like a checkerboard
+
+            Turtles is an array of Turtle objects which move on top of the Patches.
+            Each Turtle knows the Patch it is over and it's x, y location.
+
+            Links are an array of Link objects. Each link connects two Turtles.
+
+            All models subclass class Model, with their own Patches, Turtles, and Links
+
+            ---
+
+            ## Running a Model
+
+            Every model contains 2 methods which are overridden by the user's model.
+
+            setup() {}\
+            step() {}
+
+            The setup method is called once, when the model starts.
+
+            The step method is called periodically to advance the state of the model.
+
+            An Animator function is provided for the user but it not required.
+            (Ex: Our testing code simply calls step() in a for loop)
+
+            ---
+
+            ## View
+
+            Here's the surprise, Models are data only. A View makes it visible.
+
+            ---
+
+            ## Controller
+
+            And better yet, we can play with the input values to a running model, letting us see how its evolution can be modified.
+        </script>
+
+        <script type="module">
+            import { marked } from 'https://esm.sh/marked@12'
+            import { initDeck, splitMarkdownSlides } from '../shared/deck.js'
+
+            const deck = document.getElementById('deck')
+            const raw = document.getElementById('slides').textContent
+
+            for (const md of splitMarkdownSlides(raw)) {
+                const section = document.createElement('section')
+                section.className = 'slide'
+                section.innerHTML = marked.parse(md)
+                deck.appendChild(section)
+            }
+
+            initDeck(deck)
+        </script>
+    </body>
+</html>

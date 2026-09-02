@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SlidesHtml</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="../shared/deck.css" />
+</head>
+<body>
+
+<a class="hub-link" href="../index.html">&larr; Slideshow</a>
+
+<div id="deck">
+  <section class="slide">
+    <h1>SlidesHtml</h1>
+    <p>Slides written directly as HTML. Arrow keys, click the edges, or swipe to move between slides.</p>
+  </section>
+
+  <section class="slide">
+    <h2>Slides are just HTML</h2>
+    <p>Each slide is a <code>&lt;section class="slide"&gt;</code> in <code>index.html</code> &mdash; write whatever markup you need: text, lists, images, code.</p>
+  </section>
+
+  <section class="slide">
+    <h2>Anything goes</h2>
+    <ul>
+      <li>Headings and paragraphs</li>
+      <li>Lists, like this one</li>
+      <li>Code blocks</li>
+      <li>Images</li>
+    </ul>
+  </section>
+
+  <section class="slide">
+    <h2>Code blocks work too</h2>
+    <pre><code>function hello() {
+  console.log("hello, slide");
+}</code></pre>
+  </section>
+
+  <section class="slide">
+    <h1>That's it</h1>
+    <p>Duplicate a <code>&lt;section&gt;</code> to add a slide. No build step, no dependencies.</p>
+  </section>
+</div>
+
+<script type="module">
+  import { initDeck } from '../shared/deck.js';
+  initDeck(document.getElementById('deck'));
+</script>
+</body>
+</html>

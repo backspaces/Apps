@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Service Worker Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1a202c; }
+  h1 { display: flex; align-items: center; gap: 0.6rem; }
+  h1 img { width: 40px; height: 40px; }
+  .status { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .badge { padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+  .badge.on { background: #c6f6d5; color: #22543d; }
+  .badge.off { background: #fed7d7; color: #822727; }
+  .badge.neutral { background: #e2e8f0; color: #2d3748; }
+  button { padding: 0.5rem 1rem; margin: 0.2rem 0.4rem 0.2rem 0; cursor: pointer; }
+  #log { background: #1a202c; color: #a0aec0; font-family: ui-monospace, monospace; font-size: 0.8rem;
+         padding: 0.8rem; border-radius: 6px; height: 260px; overflow-y: auto; white-space: pre-wrap; }
+  .log-line { border-bottom: 1px solid #2d3748; padding: 0.15rem 0; }
+  .log-line.cache { color: #68d391; }
+  .log-line.network { color: #63b3ed; }
+  .log-line.offline-miss { color: #fc8181; }
+  ol { padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+
+<h1><img src="logo.svg" alt="" id="logo"> Service Worker Demo</h1>
+
+<p>A minimal, hands-on look at what a service worker actually does: it sits
+between this page and the network, so it can cache assets and keep the app
+working offline. Compare this with <code>as/models/runWorker.js</code> — that's
+a plain <em>web</em> worker (one-shot background computation, no network
+involvement); this is the other kind of worker entirely.</p>
+
+<div class="status">
+  <span id="onlineBadge" class="badge neutral">checking network…</span>
+  <span id="swBadge" class="badge neutral">checking service worker…</span>
+</div>
+
+<div>
+  <button id="reloadBtn">Reload page</button>
+  <button id="refetchLogoBtn">Re-fetch logo.svg</button>
+  <button id="updateBtn">Check for update</button>
+</div>
+
+<h3>Try this</h3>
+<ol>
+  <li>Load the page once (this registers the service worker — first load is
+    still served entirely from the network, since nothing controls it yet).</li>
+  <li>Reload. The badge should flip to "controlled", and the log below should
+    show <code>index.html</code> / <code>logo.svg</code> served from
+    <span style="color:#68d391">cache</span>, not the network.</li>
+  <li>Open DevTools → Network tab → check "Offline" (or turn off wifi), then
+    reload again. The page still works.</li>
+  <li>To see the update lifecycle: edit <code>sw.js</code>, bump
+    <code>VERSION</code>, save, and reload twice. Watch the log for
+    <code>installing → installed → activating → activated</code>.</li>
+</ol>
+
+<h3>Fetch log</h3>
+<div id="log"></div>
+
+<script>
+  const logEl = document.getElementById('log')
+  const onlineBadge = document.getElementById('onlineBadge')
+  const swBadge = document.getElementById('swBadge')
+
+  function log(msg, cls = '') {
+    const line = document.createElement('div')
+    line.className = 'log-line' + (cls ? ' ' + cls : '')
+    const t = new Date().toLocaleTimeString()
+    line.textContent = `[${t}] ${msg}`
+    logEl.appendChild(line)
+    logEl.scrollTop = logEl.scrollHeight
+  }
+
+  function updateOnlineBadge() {
+    const online = navigator.onLine
+    onlineBadge.textContent = online ? 'network: online' : 'network: offline'
+    onlineBadge.className = 'badge ' + (online ? 'on' : 'off')
+  }
+  window.addEventListener('online', () => { updateOnlineBadge(); log('browser event: online') })
+  window.addEventListener('offline', () => { updateOnlineBadge(); log('browser event: offline') })
+  updateOnlineBadge()
+
+  function updateSwBadge() {
+    const controlled = !!navigator.serviceWorker?.controller
+    swBadge.textContent = controlled ? 'service worker: controlling this page' : 'service worker: not yet controlling'
+    swBadge.className = 'badge ' + (controlled ? 'on' : 'neutral')
+  }
+
+  document.getElementById('reloadBtn').addEventListener('click', () => location.reload())
+  document.getElementById('refetchLogoBtn').addEventListener('click', () => {
+    log('manual fetch of logo.svg issued')
+    fetch('logo.svg').catch(err => log('fetch failed: ' + err))
+  })
+
+  if ('serviceWorker' in navigator) {
+    updateSwBadge()
+
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'fetch') {
+        const shortUrl = e.data.url.replace(location.origin, '')
+        log(`${shortUrl} ← ${e.data.source}`, e.data.source)
+      }
+    })
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      log('controllerchange: a new service worker has taken control')
+      updateSwBadge()
+    })
+
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      log(`registered (scope: ${reg.scope})`)
+
+      document.getElementById('updateBtn').addEventListener('click', () => {
+        log('manual update check…')
+        reg.update()
+      })
+
+      reg.addEventListener('updatefound', () => {
+        const installing = reg.installing
+        log('updatefound: new worker installing')
+        installing.addEventListener('statechange', () => {
+          log('new worker state → ' + installing.state)
+        })
+      })
+    }).catch(err => log('registration failed: ' + err))
+  } else {
+    swBadge.textContent = 'service workers not supported'
+    swBadge.className = 'badge off'
+  }
+</script>
+
+</body>
+</html>

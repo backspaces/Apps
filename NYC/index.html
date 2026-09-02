@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>NYC Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  #map { height: 100%; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<script type="module">
+  import L from 'https://esm.sh/leaflet@1.9.4';
+
+  const map = L.map('map').setView([40.7128, -74.0060], 12); // NYC
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  // Nero Wolfe (Rex Stout) sites. Two are close to text-given addresses;
+  // the rest only ever get a neighborhood in the novels, so their pins are
+  // a reasonable guess within that neighborhood, not a quoted address.
+  const wolfeSites = [
+    {
+      name: "Nero Wolfe's Brownstone",
+      lat: 40.7538, lng: -73.9989,
+      confirmed: true,
+      desc: "Home of Nero Wolfe, Archie Goodwin, chef Fritz Brenner, and orchid nurse Theodore Horstmann. Stout gave the house a different number on West 35th St (between 9th & 10th Ave) in nearly every book &mdash; 918, 922, 902, 506, 618... The Wolfe Pack settled on 454 W. 35th St for its 1996 plaque, the address used here."
+    },
+    {
+      name: "Saul Panzer's Apartment",
+      lat: 40.7488, lng: -73.9787,
+      confirmed: true,
+      desc: "Wolfe's best and most trusted freelance operative. Lives alone on East 38th Street between Lexington and Third Avenue &mdash; one of the few supporting-cast addresses Stout actually specifies."
+    },
+    {
+      name: "Lily Rowan's Penthouse",
+      lat: 40.7676, lng: -73.9668,
+      confirmed: false,
+      desc: "Archie's on-again, off-again love interest and Manhattan heiress. Her parties are held at a Park Avenue penthouse; no street number is ever given. Pin placed near Park Ave in the East 60s as a reasonable guess."
+    },
+    {
+      name: "Rusterman's Restaurant",
+      lat: 40.7599, lng: -73.9721,
+      confirmed: false,
+      desc: "The city's finest restaurant, founded by Wolfe's late friend Marko Vukcic; Wolfe becomes its trustee after Marko's death. No exact address given &mdash; placed on the East Side, consistent with its high-end clientele."
+    },
+    {
+      name: "Police Headquarters (\"the Big Building\")",
+      lat: 40.7202, lng: -73.9975,
+      confirmed: false,
+      desc: "Home turf of Inspector Cramer of Manhattan Homicide, Wolfe's frequent adversary and reluctant ally. Placed at 240 Centre St, the real NYPD headquarters of the era Stout was writing in."
+    },
+    {
+      name: "New York Gazette",
+      lat: 40.7557, lng: -73.9880,
+      confirmed: false,
+      desc: "Fictional newspaper where Lon Cohen &mdash; Wolfe and Archie's favorite source for gossip and favors traded for scoops &mdash; works. No address given; placed in the old Midtown newspaper/printing district."
+    },
+    {
+      name: "District Attorney's Office",
+      lat: 40.7157, lng: -74.0007,
+      confirmed: false,
+      desc: "Where Wolfe's cases often end up, tangling with assorted assistant DAs. Placed at 1 Hogan Place, the real Manhattan DA's office."
+    },
+    {
+      name: "Orrie Cather's Apartment",
+      lat: 40.7443, lng: -73.9819,
+      confirmed: true,
+      desc: "One of Wolfe's three regular freelance operatives (with Saul Panzer and Fred Durkin) &mdash; sharpest-dressed of the trio, and the one most likely to cause trouble. Lives on East 30th Street; no specific building number given, so the pin is placed mid-block between Park Ave South and Lexington."
+    },
+    {
+      name: "Sergeant Purley Stebbins",
+      lat: 40.7423, lng: -73.9990,
+      confirmed: true,
+      desc: "Cramer's loyal, dogged sergeant, forever suspicious that Wolfe and Archie know more than they're saying. Lives on West 20th Street; no specific building number given, so the pin is placed mid-block in Chelsea between 7th and 8th Ave."
+    }
+  ];
+
+  // Mr. and Mrs. North (Frances & Richard Lockridge) sites. Both entries
+  // here are guesses: the Norths' "24 St. Anne's Place" comes from the
+  // radio adaptation, not the novels, and St. Anne's Place isn't a real
+  // Manhattan street (possibly a light fictionalization of the real
+  // St. Luke's Place, which is where the pin is placed). Weigand's precinct
+  // is only ever called "Homicide, Manhattan West" in the books, with no
+  // address, so his pin is a plausible West Side placement, not a quote.
+  const northSites = [
+    {
+      name: "Pam & Jerry North's Apartment",
+      lat: 40.7317, lng: -74.0054,
+      confirmed: false,
+      desc: "Amateur sleuths Pamela and Gerald (\"Jerry\") North, a publisher and his scatterbrained-but-sharp wife, whose Greenwich Village apartment building kicks off the series when a body turns up in the empty top-floor studio (<em>The Norths Meet Murder</em>, 1940). The radio series gives their address as 24 St. Anne's Place &mdash; not a real Manhattan street, so the pin sits near St. Luke's Place, a real Village block it may be echoing."
+    },
+    {
+      name: "Lt. Bill Weigand / Homicide, Manhattan West",
+      lat: 40.7505, lng: -73.9946,
+      confirmed: false,
+      desc: "NYPD homicide detective (later Captain) and the Norths' good-natured foil, forever exasperated by Pam's leaps of logic that somehow pan out. His squad is referred to only as \"Homicide, Manhattan West\" &mdash; no address given, so the pin is a plausible West Side placement."
+    }
+  ];
+
+  function makeIcon(color, size) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.6)"></div>`,
+      iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+    });
+  }
+
+  const seriesStyles = {
+    wolfe: { confirmedColor: '#8B0000', guessColor: '#555', label: 'Nero Wolfe series' },
+    north: { confirmedColor: '#00695C', guessColor: '#4DB6AC', label: 'Mr. & Mrs. North series' }
+  };
+
+  function addSites(sites, styleKey) {
+    const style = seriesStyles[styleKey];
+    const confirmedIcon = makeIcon(style.confirmedColor, 14);
+    const guessIcon = makeIcon(style.guessColor, 12);
+    sites.forEach(site => {
+      const marker = L.marker([site.lat, site.lng], {
+        icon: site.confirmed ? confirmedIcon : guessIcon,
+        title: site.name
+      }).addTo(map);
+      const color = site.confirmed ? style.confirmedColor : '#777';
+      const precision = site.confirmed
+        ? 'text-given address'
+        : 'approximate &mdash; no address given in the novels';
+      marker.bindPopup(
+        `<div style="font-size:11px;color:${style.confirmedColor};text-transform:uppercase;letter-spacing:.03em;">${style.label}</div>` +
+        `<strong>${site.name}</strong><br>${site.desc}` +
+        `<div style="color:${color};font-size:11px;margin-top:4px;">${precision}</div>`,
+        { maxWidth: 260 }
+      );
+    });
+  }
+
+  addSites(wolfeSites, 'wolfe');
+  addSites(northSites, 'north');
+</script>
+</body>
+</html>

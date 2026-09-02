@@ -1,0 +1,24 @@
+{
+  "version": "5",
+  "remote": {
+    "https://agentscript.org/models/SchellingModel.js": "8303371ac79f44641c56446ff2e8b71bd058c1d8beaa7f016c9050d108ba092c",
+    "https://agentscript.org/src/AgentArray.js": "1f08d058facd13ed00a9ea3a8bb80f8a3cc23daaf1c97aa2520b580f4b76f8d1",
+    "https://agentscript.org/src/AgentList.js": "202a8391bf0fa354ffa091c821fa3fe0dc71f0deec11922e9d20e2654a0a46ab",
+    "https://agentscript.org/src/AgentSet.js": "26b6ede7f11555edb5e48a31dfef693afd0ff3290a2def39ecfd721d28dd624c",
+    "https://agentscript.org/src/DataSet.js": "ff879d8c2ccb56b8debe6738e62fb84efb20aee6d3937a6a7b4915281cb23570",
+    "https://agentscript.org/src/GeoWorld.js": "b826ff28b417a765bc0571f7da01bd98af2af8d20590fc9f78b97a2d0191f112",
+    "https://agentscript.org/src/Link.js": "6e0790ab3a79814c51e65ffa20ca9a1b864b4ebcd9fe65a415a0307afe479ef0",
+    "https://agentscript.org/src/Links.js": "47beea203514b1c54565eeed4985463da3774a22938632bc1ed6c20a1a2e98af",
+    "https://agentscript.org/src/Model.js": "633c6d502f99d847a76b26df2eafee3114ded99e81614d6f404772db302281bc",
+    "https://agentscript.org/src/Patch.js": "419f08757cdd8e96a54fb3209608311410a460a3af90f38e0f415093a042ff7f",
+    "https://agentscript.org/src/Patches.js": "cf992ea156c49d9f9c54f8b3d628dc0677a71c41075d1de270d0cd84ec431998",
+    "https://agentscript.org/src/Turtle.js": "05b1824a6b32ad2ab269fbc1bd9dbe3b26e44c69fc8ad30ec506e28e19220066",
+    "https://agentscript.org/src/Turtles.js": "f3a995026660379b3baa0ae5a8c31fe071569c63376e21bf00c4ebc3a9051368",
+    "https://agentscript.org/src/World.js": "e4936b818aeb228e0e638cbcb5b5452f80b449d9fee56abb299d7638654fe256",
+    "https://agentscript.org/src/geofilters.js": "d5a5b8bb7cbbaf00ec407e60c777fb2f49c7a24b89d88b6f96e8c67990bf8519",
+    "https://agentscript.org/src/geojson.js": "ca4d650fd6c194b67decd4cd5a6054d293999e91512f041581afd4df20df629e",
+    "https://agentscript.org/src/gis.js": "8c4cd94350475d2809d02ff4bbee2e98b7ba0a74886a8dd3853a21f5c3dacea5",
+    "https://agentscript.org/src/utils.js": "3b4a1894877cce5aded5e430dc4d8fa543b6b7ffa3d75c5e3b5cdf03359d503f",
+    "https://agentscript.org/vendor/turfImports.js": "43163f6f3e89b62b46d9489ea03b890a85ece5126bf19bc019c49a3672d65b2e"
+  }
+}

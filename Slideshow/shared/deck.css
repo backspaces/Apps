@@ -1,0 +1,161 @@
+:root {
+    color-scheme: light dark;
+    /* Override these in a deck's own index.html (in a <style> block after
+       the shared/deck.css <link>) to change that deck's text size/spacing
+       without touching the shared file. */
+    --base-font-size: 25px;
+    --base-line-height: 1.35;
+}
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: #16171a;
+    font: var(--base-font-size) / var(--base-line-height) system-ui, sans-serif;
+    color: #eee;
+}
+#deck {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8vh 10vw;
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.35s ease;
+}
+.slide.active {
+    opacity: 1;
+    visibility: visible;
+}
+.slide h1 {
+    font-size: 3em;
+    line-height: 1.15;
+    margin: 0 0 0.3em;
+}
+.slide h2 {
+    font-size: 2em;
+    line-height: 1.15;
+    margin: 0 0 0.5em;
+    color: #aab;
+}
+.slide h3 {
+    line-height: 1.15;
+    color: #aab;
+}
+.slide p {
+    max-width: 40em;
+}
+.slide blockquote {
+    max-width: 40em;
+    margin: 0;
+    padding-left: 1em;
+    border-left: 3px solid #556;
+    color: #ccd;
+}
+.slide pre {
+    text-align: left;
+    background: #0d0e10;
+    padding: 1em 1.4em;
+    border-radius: 8px;
+    overflow-x: auto;
+    max-width: 60vw;
+}
+.slide code {
+    background: #0d0e10;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+}
+.slide pre code {
+    background: none;
+    padding: 0;
+}
+.slide img {
+    max-width: 80vw;
+    max-height: 60vh;
+}
+.slide table {
+    border-collapse: collapse;
+}
+.slide th,
+.slide td {
+    border: 1px solid #445;
+    padding: 0.4em 0.8em;
+}
+.slide a {
+    color: #8ab4ff;
+}
+
+.nav-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8vw;
+    min-width: 40px;
+    cursor: pointer;
+    z-index: 10;
+}
+#zone-prev {
+    left: 0;
+}
+#zone-next {
+    right: 0;
+}
+
+.arrow {
+    position: fixed;
+    bottom: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    user-select: none;
+    pointer-events: none;
+    z-index: 20;
+}
+#arrow-prev {
+    left: 24px;
+}
+#arrow-next {
+    right: 24px;
+}
+
+#counter {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font:
+        14px system-ui,
+        sans-serif;
+    color: #888;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.hub-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font:
+        14px system-ui,
+        sans-serif;
+    color: #888;
+    text-decoration: none;
+    z-index: 20;
+}
+.hub-link:hover {
+    color: #ccc;
+}

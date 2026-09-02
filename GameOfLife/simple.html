@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>WebGPU Game of Life</title>
+    </head>
+    <body>
+        <canvas width="512" height="512"></canvas>
+
+        <script type="module">
+            // Conway's Game of Life on the GPU.
+            //
+            // The whole simulation lives in one storage buffer of u32 cells (0/1), which
+            // we ping-pong between two copies each generation: a compute shader reads
+            // buffer A and writes the next generation into buffer B, then next tick
+            // reads B and writes A, and so on.
+            //
+            // To keep this simpler than the typical WebGPU life tutorial, there's no
+            // vertex buffer or per-cell instancing for drawing. Instead the render pass
+            // just draws one full-screen triangle, and the fragment shader looks up
+            // which cell a pixel falls in directly from the same state buffer.
+
+            const GRID_WIDTH = 32
+            const GRID_HEIGHT = 32
+            const CELL_SIZE = 16 // pixels per cell
+            const UPDATE_INTERVAL = 100 // ms between generations
+            const WORKGROUP_SIZE = 8
+
+            if (!navigator.gpu) throw new Error('WebGPU not supported.')
+            const adapter = await navigator.gpu.requestAdapter()
+            if (!adapter) throw new Error('No GPUAdapter found.')
+            const device = await adapter.requestDevice()
+
+            const canvas = document.querySelector('canvas')
+            const context = canvas.getContext('webgpu')
+            const format = navigator.gpu.getPreferredCanvasFormat()
+            context.configure({ device, format, alphaMode: 'opaque' })
+
+            // --- Shaders -----------------------------------------------------------
+
+            const computeShader = device.createShaderModule({
+                code: `
+    struct Params {
+      width: u32,
+      height: u32,
+      cellSize: f32,
+    }
+    @group(0) @binding(0) var<uniform> params: Params;
+    @group(0) @binding(1) var<storage, read> stateIn: array<u32>;
+    @group(0) @binding(2) var<storage, read_write> stateOut: array<u32>;
+
+    fn cellIndex(x: i32, y: i32) -> u32 {
+      let w = i32(params.width);
+      let h = i32(params.height);
+      let xw = (x + w) % w;
+      let yw = (y + h) % h;
+      return u32(yw * w + xw);
+    }
+
+    @compute @workgroup_size(${WORKGROUP_SIZE}, ${WORKGROUP_SIZE})
+    fn main(@builtin(global_invocation_id) gid: vec3u) {
+      if (gid.x >= params.width || gid.y >= params.height) {
+        return;
+      }
+      let x = i32(gid.x);
+      let y = i32(gid.y);
+
+      var neighbors = 0u;
+      for (var dy = -1; dy <= 1; dy = dy + 1) {
+        for (var dx = -1; dx <= 1; dx = dx + 1) {
+          if (!(dx == 0 && dy == 0)) {
+            neighbors = neighbors + stateIn[cellIndex(x + dx, y + dy)];
+          }
+        }
+      }
+
+      let alive = stateIn[cellIndex(x, y)];
+      var next = 0u;
+      if (alive == 1u && (neighbors == 2u || neighbors == 3u)) {
+        next = 1u;
+      } else if (alive == 0u && neighbors == 3u) {
+        next = 1u;
+      }
+      stateOut[cellIndex(x, y)] = next;
+    }
+`,
+            })
+
+            const renderShader = device.createShaderModule({
+                code: `
+    struct Params {
+      width: u32,
+      height: u32,
+      cellSize: f32,
+    }
+    @group(0) @binding(0) var<uniform> params: Params;
+    @group(0) @binding(1) var<storage, read> state: array<u32>;
+
+    @vertex
+    fn vs(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
+      // One oversized triangle that covers the whole canvas — no vertex
+      // buffer needed.
+      var pos = array<vec2f, 3>(
+        vec2f(-1.0, -1.0),
+        vec2f(3.0, -1.0),
+        vec2f(-1.0, 3.0),
+      );
+      return vec4f(pos[vi], 0.0, 1.0);
+    }
+
+    @fragment
+    fn fs(@builtin(position) fragCoord: vec4f) -> @location(0) vec4f {
+      let cx = u32(fragCoord.x / params.cellSize);
+      let cy = u32(fragCoord.y / params.cellSize);
+
+      // Leave a small gap at each cell's edge so neighboring alive cells
+      // read as distinct squares instead of merging into one blob — matches
+      // the ~80%-scaled quads the tutorial draws per cell.
+      let margin = params.cellSize * 0.1;
+      let localX = fragCoord.x % params.cellSize;
+      let localY = fragCoord.y % params.cellSize;
+      if (localX < margin || localX > params.cellSize - margin ||
+          localY < margin || localY > params.cellSize - margin) {
+        return vec4f(0.0, 0.0, 0.0, 1.0);
+      }
+
+      let alive = state[cy * params.width + cx];
+      let c = f32(alive);
+      return vec4f(c, c, c, 1.0);
+    }
+`,
+            })
+
+            // --- Buffers -------------------------------------------------------------
+
+            const cellCount = GRID_WIDTH * GRID_HEIGHT
+
+            const paramsBuffer = device.createBuffer({
+                size: 16, // width: u32, height: u32, cellSize: f32, padding
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            })
+
+            {
+                const data = new ArrayBuffer(16)
+                const view = new DataView(data)
+                view.setUint32(0, GRID_WIDTH, true)
+                view.setUint32(4, GRID_HEIGHT, true)
+                view.setFloat32(8, CELL_SIZE, true)
+                device.queue.writeBuffer(paramsBuffer, 0, data)
+            }
+
+            const stateBuffers = [
+                device.createBuffer({
+                    size: cellCount * 4,
+                    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+                }),
+                device.createBuffer({
+                    size: cellCount * 4,
+                    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+                }),
+            ]
+
+            const cellStateArray = new Uint32Array(cellCount)
+            for (let i = 0; i < cellCount; i++) {
+                cellStateArray[i] = Math.random() < 0.35 ? 1 : 0
+            }
+            device.queue.writeBuffer(stateBuffers[0], 0, cellStateArray)
+
+            // --- Pipelines & bind groups ----------------------------------------------
+
+            const computePipeline = device.createComputePipeline({
+                layout: 'auto',
+                compute: { module: computeShader, entryPoint: 'main' },
+            })
+
+            const renderPipeline = device.createRenderPipeline({
+                layout: 'auto',
+                vertex: { module: renderShader, entryPoint: 'vs' },
+                fragment: {
+                    module: renderShader,
+                    entryPoint: 'fs',
+                    targets: [{ format }],
+                },
+                primitive: { topology: 'triangle-list' },
+            })
+
+            function makeComputeBindGroup(inIndex, outIndex) {
+                return device.createBindGroup({
+                    layout: computePipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: paramsBuffer } },
+                        {
+                            binding: 1,
+                            resource: { buffer: stateBuffers[inIndex] },
+                        },
+                        {
+                            binding: 2,
+                            resource: { buffer: stateBuffers[outIndex] },
+                        },
+                    ],
+                })
+            }
+
+            function makeRenderBindGroup(index) {
+                return device.createBindGroup({
+                    layout: renderPipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: paramsBuffer } },
+                        {
+                            binding: 1,
+                            resource: { buffer: stateBuffers[index] },
+                        },
+                    ],
+                })
+            }
+
+            const computeBindGroups = [
+                makeComputeBindGroup(0, 1),
+                makeComputeBindGroup(1, 0),
+            ]
+            const renderBindGroups = [
+                makeRenderBindGroup(0),
+                makeRenderBindGroup(1),
+            ]
+
+            const workgroupsX = Math.ceil(GRID_WIDTH / WORKGROUP_SIZE)
+            const workgroupsY = Math.ceil(GRID_HEIGHT / WORKGROUP_SIZE)
+
+            // --- Main loop -------------------------------------------------------------
+
+            let step = 0
+
+            function updateGrid() {
+                const parity = step % 2
+
+                const encoder = device.createCommandEncoder()
+
+                const computePass = encoder.beginComputePass()
+                computePass.setPipeline(computePipeline)
+                computePass.setBindGroup(0, computeBindGroups[parity])
+                computePass.dispatchWorkgroups(workgroupsX, workgroupsY)
+                computePass.end()
+
+                step++
+
+                const renderPass = encoder.beginRenderPass({
+                    colorAttachments: [
+                        {
+                            view: context.getCurrentTexture().createView(),
+                            clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                            loadOp: 'clear',
+                            storeOp: 'store',
+                        },
+                    ],
+                })
+                renderPass.setPipeline(renderPipeline)
+                renderPass.setBindGroup(0, renderBindGroups[step % 2])
+                renderPass.draw(3)
+                renderPass.end()
+
+                device.queue.submit([encoder.finish()])
+            }
+
+            setInterval(updateGrid, UPDATE_INTERVAL)
+        </script>
+    </body>
+</html>

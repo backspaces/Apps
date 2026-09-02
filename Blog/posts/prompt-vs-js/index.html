@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt vs JavaScript — Owen's Blog</title>
+  <link rel="stylesheet" href="/agentscript/apps/Blog/style.css">
+</head>
+<body>
+  <header><h1><a href="/agentscript/apps/Blog/">Owen's Blog</a></h1></header>
+  <main><article>
+  <h1>Prompt vs JavaScript</h1>
+  <p><time datetime="Tue Jul 14 2026 18:00:00 GMT-0600 (Mountain Daylight Time)">July 15, 2026</time></p>
+  <p>Claude Code and I created a new AgentScript Model, the SchellingModel which explores segregation in neighborhoods.</p>
+<p>A typical neighbor is comfortable with a percentage of similar neighbors. If they don't have that, they move to a new neighborhood and try again until comfortable.</p>
+<p>We successfully built the model, building the needed JavaScript from a series of prompts, within .md files. This is typical: use a series of prompts to create the desired JavaScript.</p>
+<p>Notice that the user does not use JavaScript directly, only English in the form of a prompt. Several people have commented on this as replacing JS with English.</p>
+<p>This made us wonder: what if we did really kept the English and used it in different AI's to create the JS we want to run there? Really use English, via prompts, to be the source code!</p>
+<p>Our first test was with Claude AI (browser) with the same prompts. It failed!</p>
+<p>We modified the prompt to successfully create the model we wanted, and still worked in Claude Code. So now we had an English language version of the SchellingModel in two AIs.</p>
+<p>So then we went to a new AI, Chrome's Gemini. It worked! We're on a roll so tried another AI. And it failed! So why? What is the problem?</p>
+<p>The first problem is telling the AI to not guess if it needs some information not available to it. It should complain rather than guessing.</p>
+<p>Similarly it should not use information in the environment in which it runs. Both are subtle: AI's really want to satisfy the users so will go beyond the prompts themselves.</p>
+<p>So we thought we had nailed it: make sure the prompt is sufficiently strict and completely self contained.</p>
+<p>Wow: just think, a github repo with prompts replacing the code they create. Well, it doesn't work! Why? Mainly AI's, like folks, change over time. So a prompt that works today may not work tomorrow. The use of language varies over time.</p>
+<p>Sigh!</p>
+<p>But we did decide to keep the prompts along with the JS of our models. They become the &quot;README.md&quot; for the model. And a way to recreate the model within new environments.</p>
+
+</article>
+</main>
+</body>
+</html>

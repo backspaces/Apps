@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Voronoi Diagram</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+  canvas { display: block; cursor: crosshair; }
+  #hint {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #ccc;
+    font: 14px system-ui, sans-serif;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 10px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="hint">Click empty space to add a point &middot; click a point to remove it</div>
+<canvas id="canvas"></canvas>
+
+<script type="module">
+  import { Delaunay } from 'https://esm.sh/d3-delaunay@6'
+
+  const canvas = document.getElementById('canvas')
+  const ctx = canvas.getContext('2d')
+
+  const POINT_RADIUS = 5
+  const HIT_RADIUS = 10
+
+  let points = []
+  let width, height
+
+  function resize() {
+    width = window.innerWidth
+    height = window.innerHeight
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = width * dpr
+    canvas.height = height * dpr
+    canvas.style.width = width + 'px'
+    canvas.style.height = height + 'px'
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    draw()
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height)
+
+    if (points.length >= 2) {
+      const delaunay = Delaunay.from(points)
+      const voronoi = delaunay.voronoi([0, 0, width, height])
+      ctx.beginPath()
+      voronoi.render(ctx)
+      ctx.strokeStyle = '#3388ff'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    }
+
+    ctx.fillStyle = '#ff3333'
+    for (const [x, y] of points) {
+      ctx.beginPath()
+      ctx.arc(x, y, POINT_RADIUS, 0, 2 * Math.PI)
+      ctx.fill()
+    }
+  }
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const hitIndex = points.findIndex(
+      ([px, py]) => Math.hypot(px - x, py - y) < HIT_RADIUS
+    )
+
+    if (hitIndex >= 0) {
+      points.splice(hitIndex, 1)
+    } else {
+      points.push([x, y])
+    }
+    draw()
+  })
+
+  window.addEventListener('resize', resize)
+  resize()
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+---
+title: Home
+layout: layouts/base.njk
+---
+<ul class="post-list">
+{% for post in collections.posts | reverse %}
+  <li>
+    <a href="{{ post.url | url }}">{{ post.data.title }}</a>
+    — <time datetime="{{ post.data.date }}">{{ post.data.date | readableDate }}</time>
+  </li>
+{% endfor %}
+</ul>

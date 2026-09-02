@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Downtown Santa Fe — 3D Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+  html, body { margin: 0; height: 100%; }
+
+  /* The map fills the window. MapLibre draws into this one <div>. */
+  #map { position: absolute; inset: 0; }
+
+  /* A small caption box floating over the map. Pure HTML/CSS, nothing
+     MapLibre-specific — it just sits on top. */
+  #panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    max-width: 300px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+    font: 13px/1.45 system-ui, sans-serif;
+    color: #222;
+  }
+  #panel h1 { margin: 0 0 4px; font-size: 15px; }
+  #panel p  { margin: 6px 0 0; }
+  #panel a  { color: #0a58ca; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+  <h1>Downtown Santa Fe, NM</h1>
+  <p>Drag to pan, scroll to zoom. Right-drag (or Ctrl-drag) to tilt and
+     rotate. Buildings are extruded to their real-world heights.</p>
+  <p>See <a href="README.md">README.md</a> for how this is built and where
+     the data comes from.</p>
+</div>
+
+<!-- All the map code lives in map.js (an ES module, hence type="module"). -->
+<script type="module" src="map.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SlidesMD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="../shared/deck.css" />
+</head>
+<body>
+
+<a class="hub-link" href="../index.html">&larr; Slideshow</a>
+
+<div id="deck"></div>
+
+<!--
+  Slides live below as plain markdown. Separate slides with a line
+  containing just "---". Raw HTML is allowed inline whenever you need
+  more control than markdown gives you (see the "mixed" slide below).
+-->
+<script type="text/markdown" id="slides">
+# SlidesMD
+
+Write slides in markdown for speed, drop into raw HTML whenever you need more control.
+
+---
+
+## Markdown is quick
+
+- Just write text, lists, and headings
+- No tags to open and close
+- Great for text-heavy slides
+
+---
+
+## Code blocks work
+
+```js
+function hello() {
+  console.log("hello, slide");
+}
+```
+
+---
+
+## Mixed: markdown + raw HTML
+
+Markdown handles the text, and you can drop to HTML for anything custom:
+
+<div style="display:flex; gap:2em; justify-content:center; margin-top:1em;">
+  <div style="padding:1em 1.5em; background:#2a2d33; border-radius:8px;">Box one</div>
+  <div style="padding:1em 1.5em; background:#2a2d33; border-radius:8px;">Box two</div>
+</div>
+
+---
+
+# That's it
+
+Edit the `#slides` block in `index.html` — add a slide by adding a new `---` section.
+</script>
+
+<script type="module">
+  import { marked } from 'https://esm.sh/marked@12';
+  import { initDeck, splitMarkdownSlides } from '../shared/deck.js';
+
+  const deck = document.getElementById('deck');
+  const raw = document.getElementById('slides').textContent;
+
+  for (const md of splitMarkdownSlides(raw)) {
+    const section = document.createElement('section');
+    section.className = 'slide';
+    section.innerHTML = marked.parse(md);
+    deck.appendChild(section);
+  }
+
+  initDeck(deck);
+</script>
+</body>
+</html>

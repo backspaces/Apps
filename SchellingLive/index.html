@@ -1,0 +1,83 @@
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Schelling — Live Shared Simulation</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                text-align: center;
+            }
+            canvas {
+                border: 1px solid #ccc;
+                cursor: pointer;
+                touch-action: none;
+            }
+            #stats {
+                margin: 0.5em;
+            }
+            button {
+                padding: 0.4em 1em;
+                font-size: 1em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>Schelling — Live Shared Simulation</h1>
+        <p>
+            One simulation running on a shared server — everyone watching sees the
+            same live grid update together. Click a cell to cycle it (empty → red
+            → blue → empty). Restart affects everyone too.
+        </p>
+        <div id="stats">% happy: <span id="happy">–</span> · ticks: <span id="ticks">0</span></div>
+        <canvas id="grid" width="510" height="510"></canvas>
+        <div><button id="restart">Restart</button></div>
+
+        <script>
+            const WORLD_SIZE = 25 // must match server.ts
+            const CELL = 10
+            const canvas = document.getElementById('grid')
+            const ctx = canvas.getContext('2d')
+
+            function toPixel(x, y) {
+                return [(x + WORLD_SIZE) * CELL, (WORLD_SIZE - y) * CELL]
+            }
+            function toPatch(px, py) {
+                const x = Math.round(px / CELL - WORLD_SIZE)
+                const y = Math.round(WORLD_SIZE - py / CELL)
+                return [x, y]
+            }
+
+            function draw(state) {
+                ctx.fillStyle = 'white'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                for (const [x, y, breed] of state.turtles) {
+                    ctx.fillStyle = breed === 0 ? 'red' : 'blue'
+                    const [px, py] = toPixel(x, y)
+                    ctx.fillRect(px - CELL / 2, py - CELL / 2, CELL, CELL)
+                }
+                document.getElementById('happy').textContent = state.percentHappy
+                document.getElementById('ticks').textContent = state.ticks
+            }
+
+            const events = new EventSource('/events')
+            events.onmessage = e => draw(JSON.parse(e.data))
+
+            canvas.addEventListener('click', e => {
+                const rect = canvas.getBoundingClientRect()
+                const px = e.clientX - rect.left
+                const py = e.clientY - rect.top
+                const [x, y] = toPatch(px, py)
+                fetch('/toggle', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ x, y }),
+                })
+            })
+
+            document.getElementById('restart').addEventListener('click', () => {
+                fetch('/restart', { method: 'POST' })
+            })
+        </script>
+    </body>
+</html>
