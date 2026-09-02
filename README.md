@@ -12,7 +12,7 @@ just open its `index.html` directly in a browser, no build step required.
 - [Slideshow](Slideshow/) — hub app with multiple slide decks (HTML-authored and markdown-authored) sharing one nav engine, arrow keys/click/swipe to navigate.
 - [ServiceWorkerDemo](ServiceWorkerDemo/) — hands-on look at a service worker's cache-first fetch interception and update lifecycle.
 - [CacheDemo](CacheDemo/) — a TTL/dedup/stale-while-revalidate cache built on pluggable backends (in-memory `Map` vs the native CacheStorage/Cache API used directly, no service worker).
-- [Blog](Blog/) — built from [blog-src](blog-src/) with 11ty; see that folder's README for building/deploying.
+- [Blog](Blog/) — built from [Blog-src](Blog-src/) with 11ty; see that folder's README for building/deploying.
 - [Schelling](Schelling/) — AgentScript's Schelling segregation model with interactive sliders/plot; hosted as a Deno Deploy Playground, not published via WebDAV like the others (see [DenoDeploy](DenoDeploy/)). Live: [schelling.backspaces.deno.net](https://schelling.backspaces.deno.net).
 - [SchellingLive](SchellingLive/) — the same model, but one shared server-side simulation everyone watches and can click on together. Live: [schellinglive.backspaces.deno.net](https://schellinglive.backspaces.deno.net). Also demoable via Deno Deploy's Tunnel feature straight from your laptop: `deno run --tunnel -A server.ts`.
 

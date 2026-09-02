@@ -1,24 +1,20 @@
-# blog-src
+# Blog-src
 
-11ty source for the blog. Builds to `../Blog` (the folder that actually gets
-deployed by `../uploadApps.js`, same as every other app in `Apps/`). This
-folder itself is never uploaded — only its build output is.
+11ty source for the [Blog](../Blog/) app. Builds to `../Blog`, which is the
+folder that actually gets published (same as every other app in `Apps/`). This
+`-src` folder is never uploaded — the publish tooling skips `*-src` folders —
+only the build output is.
 
 No `package.json` / `node_modules` — 11ty is run ad hoc via `npx`, pinned to
 major version 3 for stability.
 
 ```sh
-# from inside blog-src/
+# from inside Blog-src/
 npx @11ty/eleventy@3 --serve   # local dev server with live reload
 npx @11ty/eleventy@3           # one-off build into ../Blog
 ```
 
-Then deploy the built site like any other app:
-
-```sh
-# from Apps/
-deno -A uploadApps.js Blog
-```
+Then publish `../Blog` like any other app.
 
 ## Adding a post
 
