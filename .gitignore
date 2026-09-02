@@ -10,3 +10,6 @@ test-model.ts
 # local publish tooling, not published
 uploadApps.js
 getWebDAVClient.js
+
+.vscode/
+NetLogoSamples.md
