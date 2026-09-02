@@ -18,14 +18,9 @@ just open its `index.html` directly in a browser, no build step required.
 
 ## Publishing
 
-`uploadApps.js` pushes app folders to the live site at
-`https://agentscript.acequia.io/agentscript/apps/`, via WebDAV (credentials in
-`getWebDAVClient.js`). Requires [Deno](https://deno.com).
+Most apps are published to `https://agentscript.acequia.io/agentscript/apps/`
+by a small Deno + WebDAV script that walks each app folder recursively (so any
+JS, CSS, images, or data an app adds go up alongside its `index.html`). That
+script and its server credentials are kept local, not in this repo.
 
-```sh
-deno -A uploadApps.js          # upload every app folder
-deno -A uploadApps.js NYC      # upload just one folder
-```
-
-It walks each folder recursively, so any files an app adds (JS, CSS, images,
-data) get uploaded along with `index.html`.
+A few apps are instead hosted as Deno Deploy Playgrounds — noted per app above.

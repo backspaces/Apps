@@ -5,7 +5,8 @@ Bearer-token auth, so all of this is just standard HTTP methods via `curl`.
 
 ## Setup: get the token into your shell
 
-The token lives in `getWebDAVClient.js`. Pull it out once per shell session:
+The token lives in `getWebDAVClient.js`, a local file not kept in this repo.
+Pull it out once per shell session (or just paste the token in directly):
 
 ```sh
 TOKEN=$(grep -oE "eyJ[A-Za-z0-9_.-]+" ~/Dropbox/Repos/Apps/getWebDAVClient.js)
