@@ -28,10 +28,11 @@ git add -A
 git commit -m "Initial commit"
 ```
 
-Note: the hardcoded WebDAV token in `getWebDAVClient.js` is a low-risk,
-revocable dashboard token — we chose a **public** repo and left it as-is. If
-that ever matters, revoke/rotate it in the acequia dashboard and move it to an
-untracked file or env var.
+Note: `uploadApps.js` and `getWebDAVClient.js` (the publish tooling, and the
+file holding the WebDAV token) were later untracked and `.gitignore`d — they
+stay on disk and work locally but aren't in the repo. The token is still in
+the initial commit's history; if that matters, rotate it in the acequia
+dashboard rather than rewriting history.
 
 ## 3. Authenticate the GitHub CLI (one time per machine)
 
