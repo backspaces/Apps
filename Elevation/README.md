@@ -18,6 +18,11 @@ Open `index.html` in a browser. No build step, no API key.
   neighbors* (blocky, faithful to the model) and *downhill vector* (smooth
   curved streams); the sliders set droplet **spacing** and **run length**.
   **Reset** puts them back.
+- **Shift-drag** a rectangle to move the whole droplet grid to a new patch
+  of terrain (the dashed blue box shows where it is). There is no `maxBounds`
+  any more — pan and zoom anywhere first, then draw a box over a watershed in
+  another state. The elevation for the new box is downloaded on release, at a
+  tile zoom picked to keep the download bounded whatever size you draw.
 - **Click the top-left panel** to collapse it to its title (click again to
   reopen)
 
@@ -35,6 +40,10 @@ downhill rules to run — the faithful 8-neighbor one and a continuous
 downhill-vector one.
 
 Still to come: a speed control (steps are on a fixed 160 ms timer for now).
+
+The model region started as a hard-coded box; **shift-drag** now re-draws it
+anywhere on Earth (`regionselect.js`, shared with the `Fire` app), so the
+same droplet model runs on any terrain you can pan to.
 
 ## What the code does
 
@@ -126,9 +135,14 @@ helper (its own section below). Reading `map.js` top to bottom:
    - **Reset** stops and rebuilds the grid.
    - A click handler on `#panel` collapses it to its title; clicks on the
      README link or anywhere in `#controls` are ignored.
+   - **Shift-drag** on the map (`regionselect.js`) calls `loadRegion()` with
+     the box you drew: it stops the sim, re-points `MODEL_BOUNDS` /
+     `WEST…NORTH`, moves the dashed outline, downloads the elevation for the
+     new box (`pickDemZoom()` chooses the tile zoom), and rebuilds the grid.
 
 8. **Console hooks** — `window.map` (poke the map: `map.getPitch()`, …),
-   `window.sim` (`sim.step()`, `sim.droplets()`, `sim.reset()`), and
+   `window.sim` (`sim.step()`, `sim.droplets()`, `sim.reset()`,
+   `sim.region([[w,s],[e,n]])` to move the model region), and
    `grabElevation()` which downloads a [grid](#a-standalone-elevation-library-elevationjs)
    for the *current view*. Plus a `moveend` logger that prints `center /
    zoom / pitch / bearing` — pan to a view you like and copy the numbers
@@ -236,10 +250,10 @@ the `vector` streamlines.
 - **Pit filling.** `vector` droplets that end in a genuine closed basin just
   stop there; a real flow model would fill the pit and route the overflow
   onward.
-- **A fixed domain vs. following the view.** The model region is a
-  hard-coded box, its elevation downloaded once. A bigger model would stream
-  tiles as you pan, or decouple a dense **simulation lattice** from a
-  decimated **draw set** for the current view.
+- **A fixed domain vs. following the view.** The model region is one box,
+  its elevation downloaded once — now movable by **shift-drag**, but still a
+  single box. A bigger model would stream tiles as you pan, or decouple a
+  dense **simulation lattice** from a decimated **draw set** for the view.
 - **Display sensibility.** At 150 m spacing the whole box is ~13 k droplets;
   zoomed out they merge into a smear. Could hide/coarsen the layer once
   on-screen spacing drops below ~a dozen pixels. `circle-radius` already

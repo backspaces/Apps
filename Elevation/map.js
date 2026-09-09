@@ -12,6 +12,10 @@ import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.6.0/dist/maplibre-g
 // map yet — it's here for the droplet model, and to poke at from the console.
 import { fetchElevation } from './elevation.js';
 
+// Shift-drag a rectangle to move the droplet model region somewhere else
+// (replaces MapLibre's native shift-drag box-zoom). See regionselect.js.
+import { onRegionSelect, pickDemZoom, boundsRing } from './regionselect.js';
+
 // MapLibre's controls and popups need its stylesheet. We add it here so
 // everything MapLibre needs is declared in one file. Same pinned version.
 document.head.insertAdjacentHTML(
@@ -27,12 +31,6 @@ document.head.insertAdjacentHTML(
 // water run downhill later. MapLibre uses [lng, lat] order.
 const CENTER = [-105.80, 35.80];
 
-// A box around the range so the demo stays pointed at the mountains.
-const BOUNDS = [
-  [-106.10, 35.55],  // southwest corner [lng, lat]
-  [-105.50, 36.05],  // northeast corner [lng, lat]
-];
-
 const map = new maplibregl.Map({
   container: 'map',
 
@@ -45,8 +43,9 @@ const map = new maplibregl.Map({
   zoom: 10.9,
   pitch: 60,        // tilt the camera so the terrain reads as 3D
   bearing: -18,
-  maxBounds: BOUNDS,
-  minZoom: 9,
+  // No maxBounds — pan anywhere and shift-drag a new model region (a
+  // watershed in another state, say). minZoom stays low enough to travel.
+  minZoom: 3,
   maxZoom: 16,
   maxPitch: 80,
 });
@@ -160,9 +159,16 @@ map.on('mousemove', (e) => {
 // both as an overlay on the 3D terrain — they follow the surface and are
 // never hidden behind a ridge, whatever the tilt.
 
-const MODEL_BOUNDS = [[-105.90, 35.73], [-105.70, 35.88]];  // [[W,S],[E,N]] lng/lat
-const [[WEST, SOUTH], [EAST, NORTH]] = MODEL_BOUNDS;
-const DEM_ZOOM = 13;             // tile zoom the elevation grid is sampled at (~15 m)
+let MODEL_BOUNDS = [[-105.90, 35.73], [-105.70, 35.88]];  // [[W,S],[E,N]] lng/lat
+let [[WEST, SOUTH], [EAST, NORTH]] = MODEL_BOUNDS;
+const DEM_ZOOM = 13;             // initial tile zoom for the elevation grid (~15 m);
+                                 // re-picked per region on a shift-drag
+
+// Point the droplet model region at a new [[W,S],[E,N]] box.
+function setRegion(bounds) {
+  MODEL_BOUNDS = bounds;
+  [[WEST, SOUTH], [EAST, NORTH]] = bounds;
+}
 const STEP_MS = 160;             // wall-clock time between steps (until there's a speed control)
 
 const VECTOR_STEP_M = 120;       // 'vector' mode: distance moved per step
@@ -348,6 +354,22 @@ function reset() {
   buildDroplets();
 }
 
+// Download the elevation for a [[W,S],[E,N]] box and rebuild the droplet
+// grid on it. Called once on load with the Santa Fe box, and again each
+// time you shift-drag a new region.
+async function loadRegion(bounds, zoom = pickDemZoom(bounds)) {
+  stop();
+  setRegion(bounds);
+  map.getSource('region')?.setData(boundsRing(bounds));
+  elevBox.textContent = 'elevation: (loading tiles…)';
+  try {
+    demGrid = await fetchElevation({ bounds, zoom });
+    buildDroplets();
+  } catch (err) {
+    console.error('elevation grid failed to load:', err);
+  }
+}
+
 map.on('load', async () => {
   map.addSource('trails', { type: 'geojson', data: EMPTY });
   map.addLayer({
@@ -375,13 +397,21 @@ map.on('load', async () => {
     },
   });
 
-  // One elevation download for the whole model region, then place the grid.
-  try {
-    demGrid = await fetchElevation({ bounds: MODEL_BOUNDS, zoom: DEM_ZOOM });
-    buildDroplets();
-  } catch (err) {
-    console.error('elevation grid failed to load:', err);
-  }
+  // The model-region outline — a dashed rectangle so you can still see the
+  // droplet domain after panning away, and where a shift-drag put it.
+  map.addSource('region', { type: 'geojson', data: boundsRing(MODEL_BOUNDS) });
+  map.addLayer({
+    id: 'region',
+    type: 'line',
+    source: 'region',
+    paint: { 'line-color': '#1667c8', 'line-width': 2, 'line-dasharray': [3, 2], 'line-opacity': 0.9 },
+  });
+
+  // One elevation download for the model region, then place the grid.
+  loadRegion(MODEL_BOUNDS, DEM_ZOOM);
+
+  // Shift-drag a new box -> new model region.
+  onRegionSelect(map, (bounds) => loadRegion(bounds), { color: '#1667c8' });
 });
 
 // --- 5. Panel: collapse toggle, spacing slider, run controls -----
@@ -436,7 +466,13 @@ playButton.addEventListener('click', () => (timer ? stop() : start()));
 resetButton.addEventListener('click', reset);
 
 // Poke the sim from the console: sim.step(), sim.droplets(), ...
-window.sim = { start, stop, reset, step, droplets: () => droplets, grid: () => demGrid };
+// sim.region([[w,s],[e,n]]) moves the model region (same as a shift-drag).
+window.sim = {
+  start, stop, reset, step,
+  droplets: () => droplets,
+  grid: () => demGrid,
+  region: (bounds) => loadRegion(bounds),
+};
 
 // --- 6. Grab the current view as an elevation grid ----------------
 
