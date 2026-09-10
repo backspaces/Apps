@@ -10,7 +10,7 @@ duplicated per-app.
 | `camp-fire-2018-progression.geojson` | [Progression](../Progression/) | NIFC's historic GeoMAC archive for the November 2018 Camp Fire (CA) — 28 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 54,586 → 153,336 acres |
 | `las-conchas-2011-progression.geojson` | [Progression](../Progression/) | NIFC's historic GeoMAC archive for the June–July 2011 Las Conchas Fire (Jemez Mountains, NM) — 29 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 43,641 → 156,656 acres |
 | `dog-head-2016-progression.geojson` | [Progression](../Progression/) | NIFC's historic GeoMAC archive for the June 2016 Dog Head Fire (NM) — 18 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 682 → 17,911 acres |
-| `fox-tartar-2026-progression.geojson` | [Progression](../Progression/) | SimTable's time-of-arrival raster for the Jul–Aug 2026 Fox/Tartar Fire Complex (OR), converted to polygons — 83 `MultiPolygon` frames, keyed by `utcMs`, one per real report time |
+| `powder-fox-tartar-2026-progression.geojson` | [Progression](../Progression/) | SimTable's time-of-arrival raster for the Jul–Aug 2026 Powder/Fox/Tartar Fire Complex (OR), converted to polygons — 58 `MultiPolygon` frames, keyed by `utcMs`, one per real report time |
 
 The real ones (everything but the Fire sample) are downloaded and cleaned
 up by `fetch-progression.js`:
@@ -31,7 +31,7 @@ instead of one (`dissolveByDate`, tested against Hermits Peak/Calf Canyon —
 see the script's `SOURCES` entry for why that one's output isn't shipped
 here despite the mechanics working). The other shape, `kind: "toa-raster"`,
 is a single PNG where each pixel's color packs a seconds-since-ignition
-value (SimTable's format — see Fox/Tartar's `SOURCES` entry for the
+value (SimTable's format — see Powder/Fox/Tartar's `SOURCES` entry for the
 decoding and downsampling); the script thresholds it at each of the
 incident's real report times to produce the same per-frame `MultiPolygon`
 shape as everything else, so the Progression app never has to know a

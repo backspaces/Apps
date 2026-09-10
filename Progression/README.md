@@ -27,7 +27,7 @@ file, so it isn't duplicated per-app):
 | `data/camp-fire-2018-progression.geojson` | NIFC's historic GeoMAC archive, the November 2018 Camp Fire (CA) | 28 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 54,586 → 153,336 acres |
 | `data/las-conchas-2011-progression.geojson` | NIFC's historic GeoMAC archive, the June–July 2011 Las Conchas Fire (Jemez Mountains, NM) | 29 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 43,641 → 156,656 acres |
 | `data/dog-head-2016-progression.geojson` | NIFC's historic GeoMAC archive, the June 2016 Dog Head Fire (NM) | 18 `MultiPolygon` snapshots, keyed by `perimeterdatetime`, 682 → 17,911 acres |
-| `data/fox-tartar-2026-progression.geojson` | SimTable's time-of-arrival raster for the Jul–Aug 2026 Fox/Tartar Fire Complex (OR), converted to polygons | 83 `MultiPolygon` frames, keyed by `utcMs`, one per real report time |
+| `data/powder-fox-tartar-2026-progression.geojson` | SimTable's time-of-arrival raster for the Jul–Aug 2026 Powder/Fox/Tartar Fire Complex (OR), converted to polygons | 58 `MultiPolygon` frames, keyed by `utcMs`, one per real report time |
 
 All six are just "one GeoJSON feature per moment in time" — a real fire
 progression is nothing more than that, whether the moment is a simulation

@@ -39,6 +39,8 @@
 
 import { PNG } from "npm:pngjs@7";
 import { Buffer } from "node:buffer";
+import { union } from "npm:@turf/union@7";
+import { featureCollection } from "npm:@turf/helpers@7";
 
 const SOURCES = {
   "camp-fire-2018": {
@@ -95,14 +97,21 @@ const SOURCES = {
     dissolveByDate: true,
     outFile: "hermits-peak-2022-progression.geojson",
   },
-  "fox-tartar-2026": {
+  // Was "fox-tartar-2026" (two fires) — Powder Fire joined the complex and
+  // SimTable renamed the incident; this URL superseded the old one (which
+  // now 302s to a login page). `base` can also be a local path instead of
+  // a URL — useful if their server gates a link again before this one does.
+  "powder-fox-tartar-2026": {
     kind: "toa-raster",
     // <base>.png (the raster), <base>.json (worldfile + real report times/
-    // acres), <base>.pgw (same worldfile, redundant with the JSON's copy).
+    // acres — though note this incident's own `acres` array is length 61
+    // against 58 `files`/`UTC` entries, misaligned in the source; we don't
+    // use it, computing acreage from the raster instead), <base>.pgw (same
+    // worldfile, redundant with the JSON's copy).
     base:
-      "https://incidents.anyhazard.com/FoxFireTartarFireComplexPS040826/FoxFireTartarFireComplexPS040826",
+      "https://incidents.anyhazard.com/PowderFoxTartarComplexPS040826/PowderFoxTartarComplexPS040826",
     grid: 180, // downsampled grid width in cells; ~12px/cell at this image's 2048px
-    outFile: "fox-tartar-2026-progression.geojson",
+    outFile: "powder-fox-tartar-2026-progression.geojson",
   },
 };
 
@@ -139,9 +148,11 @@ async function fetchProgression(name) {
   console.log(`  wrote ${src.outFile} (${(text.length / 1e6).toFixed(2)} MB)`);
 }
 
-// Merge every feature sharing the same date value into one MultiPolygon
-// feature, summing their acreage. See the file header for why concatenating
-// rings (rather than a real union) is good enough here.
+// Merge every feature sharing the same date value into one feature, summing
+// their acreage. A real geometric union (Turf), not just concatenating
+// rings — matters when a date's pieces overlap (union merges them cleanly;
+// concatenated rings would double-draw the overlap and leave a seam).
+// Build-time only — this and its dependencies never reach the browser.
 function dissolveByDate(geojson, dateField, acresField) {
   const byDate = new Map();
   for (const f of geojson.features) {
@@ -149,33 +160,47 @@ function dissolveByDate(geojson, dateField, acresField) {
     if (!byDate.has(key)) byDate.set(key, []);
     byDate.get(key).push(f);
   }
-  const features = [...byDate.entries()].map(([date, group]) => ({
-    type: "Feature",
-    properties: {
-      [dateField]: date,
-      // Each piece of a multi-piece date carries the *same* cumulative
-      // total already (confirmed on Hermits Peak: two pieces on one date,
-      // identical Acres_1 on both) — summing would double-count, so take
-      // the max instead (equal to "any of them" when they already agree).
-      [acresField]: Math.max(...group.map((f) => f.properties[acresField] ?? 0)),
-      pieces: group.length,
-    },
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: group.flatMap((f) =>
-        f.geometry.type === "MultiPolygon" ? f.geometry.coordinates : [f.geometry.coordinates]
-      ),
-    },
-  }));
+  const features = [...byDate.entries()].map(([date, group]) => {
+    const merged = group.length === 1
+      ? group[0].geometry
+      : union(featureCollection(group.map((f) => ({ ...f, properties: {} })))).geometry;
+    return {
+      type: "Feature",
+      properties: {
+        [dateField]: date,
+        // Each piece of a multi-piece date carries the *same* cumulative
+        // total already (confirmed on Hermits Peak: two pieces on one date,
+        // identical Acres_1 on both) — summing would double-count, so take
+        // the max instead (equal to "any of them" when they already agree).
+        [acresField]: Math.max(...group.map((f) => f.properties[acresField] ?? 0)),
+        pieces: group.length,
+      },
+      geometry: merged,
+    };
+  });
   return { type: "FeatureCollection", features };
+}
+
+// `base` can be a URL (fetched over HTTP) or a local path (SimTable's
+// server has started requiring a login, so these sometimes arrive as a
+// manual download instead of a stable public link).
+async function readJson(base) {
+  return base.startsWith("http")
+    ? await (await fetch(`${base}.json`)).json()
+    : JSON.parse(await Deno.readTextFile(`${base}.json`));
+}
+async function readPng(base) {
+  return base.startsWith("http")
+    ? new Uint8Array(await (await fetch(`${base}.png`)).arrayBuffer())
+    : await Deno.readFile(`${base}.png`);
 }
 
 // Turn a SimTable time-of-arrival raster into the same "one MultiPolygon
 // per dated frame" shape the vector sources above produce.
 async function fetchToaRaster(name, src) {
   console.log(`Fetching ${name}…`);
-  const json = await (await fetch(`${src.base}.json`)).json();
-  const pngBuf = await (await fetch(`${src.base}.png`)).bytes();
+  const json = await readJson(src.base);
+  const pngBuf = await readPng(src.base);
   const { width, height, data } = PNG.sync.read(Buffer.from(pngBuf));
 
   // worldfile4326: pixelWidth, rotation, rotation, pixelHeight(negative),

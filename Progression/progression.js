@@ -56,8 +56,8 @@ const DATASETS = [
     acres: (p) => p.gisacres,
   },
   {
-    label: 'Fox/Tartar Fire Complex, Jul-Aug 2026, OR (SimTable time-of-arrival)',
-    url: '../data/fox-tartar-2026-progression.geojson',
+    label: 'Powder/Fox/Tartar Fire Complex, Jul-Aug 2026, OR (SimTable time-of-arrival)',
+    url: '../data/powder-fox-tartar-2026-progression.geojson',
     sortKey: (p) => p.utcMs,
     caption: (p) => new Date(p.utcMs).toISOString().slice(0, 16).replace('T', ' '),
     acres: (p) => p.acres,
